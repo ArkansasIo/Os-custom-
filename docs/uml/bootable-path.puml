@@ -1,0 +1,17 @@
+@startuml
+title Integrated Boot Path
+
+[BIOS/UEFI] --> [Stage 1]
+[Stage 1] --> [Stage 2]
+[Stage 2] --> [A20]
+[Stage 2] --> [GDT]
+[Stage 2] --> [Page Tables]
+[Stage 2] --> [Long Mode]
+[Long Mode] --> [64-bit Kernel]
+[64-bit Kernel] --> [CPU Detection]
+[64-bit Kernel] --> [ACPI]
+[64-bit Kernel] --> [PCIe]
+[64-bit Kernel] --> [NUMA]
+[64-bit Kernel] --> [Scheduler]
+[64-bit Kernel] --> [GPU HAL]
+@enduml
