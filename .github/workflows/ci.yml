@@ -11,16 +11,16 @@ permissions:
 
 jobs:
   assemble:
-    name: Assemble boot and kernel objects
+    name: Assemble, link, and validate
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Install toolchain
         run: |
           sudo apt-get update
-          sudo apt-get install -y nasm binutils make
-      - name: Assemble and validate
-        run: make check
+          sudo apt-get install -y nasm binutils make python3
+      - name: Build and run structural checks
+        run: make clean check
       - name: Upload build output
         uses: actions/upload-artifact@v4
         with:
