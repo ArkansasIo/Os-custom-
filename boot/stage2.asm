@@ -1,9 +1,11 @@
 BITS 16
 org 0x8000
 
-KERNEL_LBA equ 1
+STAGE2_SECTORS equ 16
 KERNEL_SECTORS equ 64
+KERNEL_LBA equ 17
 KERNEL_LOAD_SEG equ 0x1000
+KERNEL_LOAD_OFFSET equ 0x0000
 
 stage2_start:
     cli
@@ -12,7 +14,10 @@ stage2_start:
     mov es, ax
     mov ss, ax
     mov sp, 0x7C00
+    ; The BIOS passes the boot device in DL. Preserve it before any disk call.
+    mov [boot_drive], dl
     sti
+
     call load_kernel
     jc disk_error
     call enable_a20
@@ -25,8 +30,8 @@ stage2_start:
 
 load_kernel:
     mov si, dap
-    mov ah, 0x42
     mov dl, [boot_drive]
+    mov ah, 0x42
     int 0x13
     ret
 
@@ -37,19 +42,30 @@ enable_a20:
     out 0x92, al
     ret
 
+BITS 32
 protected_mode:
     mov ax, 0x10
     mov ds, ax
     mov es, ax
     mov ss, ax
-    mov edi, 0x1000
+    mov esp, 0x90000
+
+    ; Clear the 4-level page-table area below 0x5000.
     xor eax, eax
-    mov ecx, 4096/4
+    mov edi, 0x1000
+    mov ecx, 4096
     rep stosd
+
+    ; PML4[0] -> PDPT 0x2000 -> PD 0x3000.
     mov dword [0x1000], 0x2003
+    mov dword [0x1004], 0x00000000
     mov dword [0x2000], 0x3003
-    mov dword [0x3000], 0x4003
-    mov dword [0x4000], 0x00000083
+    mov dword [0x2004], 0x00000000
+
+    ; Map the first 2 MiB with one 2 MiB page (present, writable, PS).
+    mov dword [0x3000], 0x00000083
+    mov dword [0x3004], 0x00000000
+
     mov eax, 0x1000
     mov cr3, eax
     mov eax, cr4
@@ -95,7 +111,7 @@ align 4
 dap:
     db 0x10, 0
     dw KERNEL_SECTORS
-    dw 0x0000
+    dw KERNEL_LOAD_OFFSET
     dw KERNEL_LOAD_SEG
     dq KERNEL_LBA
 
